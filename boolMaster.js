@@ -13,6 +13,8 @@ function __bm_send(method, kwargs, callback) {
     })
 }
 
+// test
+
 function init_boolMaster(host, http_method) {
     if(http_method == undefined)
         http_method = 'https'
