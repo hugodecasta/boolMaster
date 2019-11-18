@@ -4,15 +4,14 @@ class BoolMaster {
 
     // -----------------------------------------
 
-    constructor(host, http_method='https') {
+    constructor(host) {
         this.host = host
-        this.http_method = http_method
     }
 
     // -----------------------------------------
 
     async send(method, kwargs) {
-        let url = this.http_method+'://'+this.host+'/?method='+method
+        let url = this.host+'/?method='+method
         for(let arg in kwargs) {
             let value = kwargs[arg]
             url += '&'+arg+'='+value
