@@ -1,42 +1,45 @@
-var boolMaster_host = null
-var boolMaster_http_method = 'https'
+'use strict'
 
-function __bm_send(method, kwargs, callback) {
-    var url = boolMaster_http_method+'://'+boolMaster_host+'/?method='+method
-    for(var arg in kwargs) {
-        var value = kwargs[arg]
-        url += '&'+arg+'='+value
+class BoolMaster {
+
+    // -----------------------------------------
+
+    constructor(host, http_method='https') {
+        this.host = host
+        this.http_method = http_method
     }
-    $.get(url).done(function(data){
-        if(callback != null)
-            callback(data)
-    })
-}
 
-function init_boolMaster(host, http_method) {
-    if(http_method == undefined)
-        http_method = 'https'
-    boolMaster_host = host
-    boolMaster_http_method = http_method
-}
+    // -----------------------------------------
 
-function boolMaster_set_http_method(method) {
-    http_method = method
-}
+    async send(method, kwargs) {
+        let url = this.http_method+'://'+this.host+'/?method='+method
+        for(let arg in kwargs) {
+            let value = kwargs[arg]
+            url += '&'+arg+'='+value
+        }
+        return new Promise((ok)=>{
+            $.get(url).done(function(data){
+                ok(data)
+            })
+        })
+    }
 
-function boolMaster_read_key(key, callback) {
-    __bm_send('read_key', {key:key}, callback)
-}
+    // -----------------------------------------
 
-function boolMaster_key_exists(key,callback) {
-    __bm_send('key_exists', {key:key}, callback)
-}
+    async read_key(key) {
+        return await this.send('read_key',{key:key})
+    }
 
-function boolMaster_key_remove(key,callback) {
-    __bm_send('key_remove', {key:key}, callback)
-}   
+    async key_exists(key) {
+        return await this.send('key_exists', {key:key})
+    }
 
-function boolMaster_write_key(key, json_data, callback) {
-    file_data = JSON.stringify(json_data)
-    __bm_send('write_key', {key:key, file_data:file_data}, callback)
+    async key_remove(key) {
+        return await this.send('key_remove', {key:key})
+    }
+
+    async write_key(key, file_data) {
+        return await this.send('write_key', {key:key, file_data:file_data})
+    }
+
 }
