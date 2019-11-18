@@ -39,6 +39,7 @@ class BoolMaster {
     }
 
     async write_key(key, file_data) {
+        file_data = JSON.stringify(file_data)
         return await this.send('write_key', {key:key, file_data:file_data})
     }
 
