@@ -6,6 +6,8 @@ class BoolMaster {
 
     constructor(host) {
         this.host = host
+        this.checkers = {}
+        this.checker_id = {}
     }
 
     // -----------------------------------------
@@ -40,6 +42,52 @@ class BoolMaster {
     async write_key(key, file_data) {
         file_data = JSON.stringify(file_data)
         return await this.send('write_key', {key:key, file_data:file_data})
+    }
+
+    // -----------------------------------------
+
+    create_key_checker(key) {
+        this.checkers[key] = {
+            int:null,
+            last_data:'',
+            callbacks:[]
+        }
+        let tthis = this
+        let interval = setInterval(async function() {
+            let data = await tthis.read_key(key)
+            let check_data = JSON.stringify(data)
+            let last_data = tthis.checkers[key].last_data
+            if(check_data != last_data) {
+                tthis.checkers[key].last_data = check_data
+                for(let id in tthis.checkers[key].callbacks) {
+                    let callback = tthis.checkers[key].callbacks[id]
+                    callback(data)
+                }
+            }
+        },500)
+    }
+
+    async register_checker(key, callback) {
+        if(! await this.key_exists(key))
+            return null
+        if(!this.checkers.hasOwnProperty(key))
+            this.create_key_checker(key)
+        let id = Math.random()+''+Date.now()
+        this.checker_id[id] = key
+        this.checkers[key].callbacks[id] = callback
+        callback(await this.read_key(key))
+        return id
+    }
+
+    unregister_checker(id) {
+        if(! this.checker_id.hasOwnProperty(id))
+            return
+        let key = this.checker_id[id]
+        delete this.checkers[key].callbacks[id]
+        if(Object.keys(this.checkers[key].callbacks) == 0) {
+            clearInterval(this.checkers[id].int)
+            delete this.checkers[id]
+        }
     }
 
 }
