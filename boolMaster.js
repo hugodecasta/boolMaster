@@ -49,22 +49,23 @@ class BoolMaster {
     create_key_checker(key) {
         this.checkers[key] = {
             int:null,
+            int_method:async function() {
+                let data = await tthis.read_key(key)
+                let check_data = JSON.stringify(data)
+                let last_data = tthis.checkers[key].last_data
+                if(check_data != last_data) {
+                    tthis.checkers[key].last_data = check_data
+                    for(let id in tthis.checkers[key].callbacks) {
+                        let callback = tthis.checkers[key].callbacks[id]
+                        callback(data)
+                    }
+                }
+            },
             last_data:'',
             callbacks:[]
         }
         let tthis = this
-        let interval = setInterval(async function() {
-            let data = await tthis.read_key(key)
-            let check_data = JSON.stringify(data)
-            let last_data = tthis.checkers[key].last_data
-            if(check_data != last_data) {
-                tthis.checkers[key].last_data = check_data
-                for(let id in tthis.checkers[key].callbacks) {
-                    let callback = tthis.checkers[key].callbacks[id]
-                    callback(data)
-                }
-            }
-        },500)
+        let interval = setInterval(this.checkers[key].int_method,500)
     }
 
     async register_checker(key, callback) {
@@ -77,6 +78,12 @@ class BoolMaster {
         this.checkers[key].callbacks[id] = callback
         callback(await this.read_key(key))
         return id
+    }
+
+    trigger_checker(key) {
+        if(!this.checkers.hasOwnProperty(key))
+            return
+        this.checkers[key].int_method()
     }
 
     unregister_checker(id) {
