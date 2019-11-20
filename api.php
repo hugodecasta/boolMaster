@@ -154,6 +154,7 @@ function cr_iv() {
 function key_to_filename($key) {
     $string_to_hash = 'filename_' . $key . '_salted';
     $filename = hash(hash_method(), $string_to_hash);
+    $filename = 'keys/' . $filename;
     return $filename;
 }
 
