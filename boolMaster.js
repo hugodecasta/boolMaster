@@ -59,13 +59,16 @@ class BoolMaster {
                         let callback = tthis.checkers[key].callbacks[id]
                         callback(data)
                     }
+                    return true
                 }
+                return false
             },
             last_data:'',
             callbacks:[]
         }
         let tthis = this
         let interval = setInterval(this.checkers[key].int_method,500)
+        this.checkers[key].int = interval
     }
 
     async register_checker(key, callback) {
@@ -76,14 +79,17 @@ class BoolMaster {
         let id = Math.random()+''+Date.now()
         this.checker_id[id] = key
         this.checkers[key].callbacks[id] = callback
-        callback(await this.read_key(key))
+
+        let changed = await this.trigger_checker(key)
+        if(!changed)
+            callback(await this.read_key(key))
         return id
     }
 
-    trigger_checker(key) {
+    async trigger_checker(key) {
         if(!this.checkers.hasOwnProperty(key))
-            return
-        this.checkers[key].int_method()
+            return false
+        return await this.checkers[key].int_method()
     }
 
     unregister_checker(id) {
@@ -91,9 +97,10 @@ class BoolMaster {
             return
         let key = this.checker_id[id]
         delete this.checkers[key].callbacks[id]
+        delete this.checker_id[id]
         if(Object.keys(this.checkers[key].callbacks) == 0) {
-            clearInterval(this.checkers[id].int)
-            delete this.checkers[id]
+            clearInterval(this.checkers[key].int)
+            delete this.checkers[key]
         }
     }
 
