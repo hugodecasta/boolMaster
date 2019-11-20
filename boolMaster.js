@@ -50,6 +50,8 @@ class BoolMaster {
         this.checkers[key] = {
             int:null,
             int_method:async function() {
+                if(! await tthis.key_exists(key))
+                    return
                 let data = await tthis.read_key(key)
                 let check_data = JSON.stringify(data)
                 let last_data = tthis.checkers[key].last_data
@@ -72,13 +74,14 @@ class BoolMaster {
     }
 
     async register_checker(key, callback) {
-        if(! await this.key_exists(key))
-            return null
         if(!this.checkers.hasOwnProperty(key))
             this.create_key_checker(key)
         let id = Math.random()+''+Date.now()
         this.checker_id[id] = key
         this.checkers[key].callbacks[id] = callback
+
+        if(! await this.key_exists(key))
+            return id
 
         let changed = await this.trigger_checker(key)
         if(!changed)
