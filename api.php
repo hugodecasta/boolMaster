@@ -68,6 +68,9 @@ function launch_core() {
 
 }
 
+if(! file_exists('keys/'))
+    mkdir('keys/',0777,true);
+
 http_response_code(200);
 $response = launch_core();
 header('Content-Type: application/json');
