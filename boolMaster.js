@@ -6,6 +6,7 @@ class BoolMaster {
 
     constructor(host) {
         this.host = host
+        this.prefix = ''
         this.checkers = {}
         this.checker_id = {}
     }
@@ -13,6 +14,7 @@ class BoolMaster {
     // -----------------------------------------
 
     async send(method, kwargs) {
+        kwargs['key'] = this.prefix+kwargs['key']
         let url = this.host+'/?method='+method
         for(let arg in kwargs) {
             let value = kwargs[arg]
@@ -23,6 +25,10 @@ class BoolMaster {
                 ok(data)
             })
         })
+    }
+
+    set_prefix(perfix) {
+        this.prefix = prefix
     }
 
     // -----------------------------------------
