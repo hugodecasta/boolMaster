@@ -27,8 +27,12 @@ class BoolMaster {
         })
     }
 
-    set_prefix(perfix) {
+    set_prefix(prefix) {
         this.prefix = prefix
+    }
+
+    get_prefix() {
+        return this.prefix
     }
 
     // -----------------------------------------
