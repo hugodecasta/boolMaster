@@ -13,8 +13,9 @@ class BoolMaster {
 
     // -----------------------------------------
 
-    async send(method, kwargs) {
-        kwargs['key'] = this.prefix+kwargs['key']
+    async send(method, kwargs, prefix=null) {
+        prefix = prefix==null?this.prefix:prefix
+        kwargs['key'] = prefix+kwargs['key']
         let url = this.host+'/?method='+method
         for(let arg in kwargs) {
             let value = kwargs[arg]
@@ -37,32 +38,33 @@ class BoolMaster {
 
     // -----------------------------------------
 
-    async read_key(key) {
-        return await this.send('read_key',{key:key})
+    async read_key(key,prefix=null) {
+        return await this.send('read_key',{key:key}, prefix)
     }
 
-    async key_exists(key) {
-        return await this.send('key_exists', {key:key})
+    async key_exists(key,prefix=null) {
+        return await this.send('key_exists', {key:key}, prefix)
     }
 
-    async key_remove(key) {
-        return await this.send('key_remove', {key:key})
+    async key_remove(key,prefix=null) {
+        return await this.send('key_remove', {key:key}, prefix)
     }
 
-    async write_key(key, file_data) {
+    async write_key(key, file_data,prefix=null) {
         file_data = JSON.stringify(file_data)
-        return await this.send('write_key', {key:key, file_data:file_data})
+        return await this.send('write_key', {key:key, file_data:file_data}, prefix)
     }
 
     // -----------------------------------------
 
     create_key_checker(key) {
+        let saved_prefix = this.prefix
         this.checkers[key] = {
             int:null,
             int_method:async function() {
-                if(! await tthis.key_exists(key))
+                if(! await tthis.key_exists(key,saved_prefix))
                     return
-                let data = await tthis.read_key(key)
+                let data = await tthis.read_key(key,saved_prefix)
                 let check_data = JSON.stringify(data)
                 let last_data = tthis.checkers[key].last_data
                 if(check_data != last_data) {
