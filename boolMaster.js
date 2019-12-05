@@ -131,7 +131,6 @@ class BoolMaster {
         delete this.checker_id[id]
         if(Object.keys(this.checkers[key].callbacks) == 0) {
             clearInterval(this.checkers[key].int)
-            console.log('remove checker',key,this.checkers[key])
             delete this.checkers[key]
         }
     }
