@@ -11,6 +11,7 @@ class BoolMaster {
         this.checkers = {}
         this.checkers_id = {}
         this.checker_int = null
+        this.checker_memory = {}
         this.main_checker = new Checker()
     }
 
@@ -78,29 +79,63 @@ class BoolMaster {
     async checkers_update() {
         let whole_data = {}
         for(let path in this.checkers) {
-            let sppath = path.split(':')
-            let key = sppath[0]
+            let sp = path.split('!')
+            let data_path = sp[0]
+            let status = sp[1]
+            let sp_data_path = data_path.split(':')
+            let key = sp_data_path[0]
             if(whole_data.hasOwnProperty(key))
                 continue
             if(await this.key_exists(key))
                 whole_data[key] = await this.read_key(key)
         }
         let changes = this.main_checker.check(whole_data)
-        console.log(changes)
-        for(let path in changes)
-            if(this.checkers.hasOwnProperty(path))
-                for(let cbid in this.checkers[path])
-                    this.checkers[path][cbid](changes[path])
+
+        for(let path in changes) {
+            let sp = path.split('!')
+            let status = sp[1]
+            let data_path = sp[0]
+            let sp_data_path = data_path.split(':')
+            if(status == 'added') {
+                let prop = sp_data_path.splice(sp_data_path.length-1,1)[0]
+                let sub_path_add = sp_data_path.join(':')+'!added'
+                let sub_path_change = sp_data_path.join(':')+':'+prop+'!changed'
+                changes[sub_path_add] = [prop,changes[path]]
+                changes[sub_path_change] = changes[path]
+            }
+        }
+
+        for(let path in changes) {
+            this.checker_memory[path] = changes[path]
+        }
+
+        for(let path in changes) {
+            let value = changes[path]
+            if(this.checkers.hasOwnProperty(path)) {
+                this.execute_callbacks(this.checkers[path],value)
+            }
+        }
+    }
+
+    execute_callbacks(callbacks,value) {
+        for(let cbid in callbacks) {
+            if(typeof(value) == typeof([]) && value!=null) {
+                let prop = value[0]
+                value = value[1]
+                callbacks[cbid](prop,value)
+                continue
+            }
+            callbacks[cbid](value)
+        }
     }
 
     create_key_checker(key) {
         this.checkers[key] = {}
-        let tthis = this/*
+        let tthis = this
         if(this.checker_int == null)
             this.checker_int = setInterval(async function(){
                 await tthis.checkers_update.call(tthis)
-            },1000)*/
-        this.checkers_update()
+            },1000)
     }
 
     // -----------------------------------------
@@ -116,6 +151,9 @@ class BoolMaster {
     }
 
     async trigger_checker(key) {
+        if(this.checker_memory.hasOwnProperty(key)) {
+            this.execute_callbacks(this.checkers[key],this.checker_memory[key])
+        }
     }
 
     unregister_checker(id) {
@@ -140,44 +178,70 @@ class Checker {
     }
 
     reset_data() {
-        this.last_data = ''
+        this.last_data = {}
     }
 
     check(new_data,last_data=null) {
-        let old_data = last_data==null?this.last_data:last_data
-        let changes = null
-        if(typeof(new_data) == typeof('') || new_data == null) {
-            if(new_data != last_data) {
-                changes = new_data
-            }
+
+        // ---------------
+
+        function is_final(value) {
+            return typeof(value) == typeof('') || typeof(value) == typeof('')
         }
-        else {
-            changes = {}
-            for(let prop in new_data) {
-                if(!old_data.hasOwnProperty(prop)) {
-                    changes[prop] = {state:'added',value:new_data[prop]}
+
+        // ---------------
+
+        let old_data = last_data==null?this.last_data:last_data
+        let changes = {}
+
+        // ---------------
+
+        for(let prop in new_data) {
+            let value = new_data[prop]
+            if(!old_data.hasOwnProperty(prop)) {
+                changes[prop+'!added'] = value
+                if(is_final(value)) {
                     continue
                 }
-                let subchange = this.check(new_data[prop],old_data[prop])
-                if(typeof(subchange) == typeof('') && subchange!=null)
-                    changes[prop] = {state:'changed',value:subchange}
-                else
-                    for(let subprop in subchange) {
-                        changes[prop+':'+subprop] = subchange[subprop]
+                let sub_changes = this.check(value, {})
+                for(let sub_prop in sub_changes) {
+                    changes[prop+':'+sub_prop] = sub_changes[sub_prop]
                 }
+                continue
             }
-            for(let prop in old_data) {
-                if(!new_data.hasOwnProperty(prop)) {
-                    changes[prop] = {state:'removed',value:null}
+
+            let old_value = old_data[prop]
+            if(is_final(value)) {
+                if(value != old_value) {
+                    changes[prop+'!changed'] = value
                 }
+                continue
             }
-            if(changes == {})
-                changes = null
+
+            let sub_changes = this.check(value, old_value)
+            for(let sub_prop in sub_changes) {
+                changes[prop+':'+sub_prop] = sub_changes[sub_prop]
+            }
         }
-        if(last_data == null && changes != null) {
+
+        for(let prop in old_data) {
+            if(!new_data.hasOwnProperty(prop)) {
+                changes[prop+'!removed'] = null
+            }
+        }
+
+        // ---------------
+
+        if(last_data == null)
             this.last_data = new_data
-        }
+
         return changes
     }
 
+}
+
+Checker.STATUS = {
+    ADDED:1,
+    CHANGED:2,
+    REMOVED:3,
 }
