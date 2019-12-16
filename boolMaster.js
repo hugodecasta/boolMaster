@@ -7,8 +7,11 @@ class BoolMaster {
     constructor(host) {
         this.host = host
         this.prefix_data = {}
+
         this.checkers = {}
-        this.checker_id = {}
+        this.checkers_id = {}
+        this.checker_int = null
+        this.main_checker = new Checker()
     }
 
     // -----------------------------------------
@@ -72,67 +75,109 @@ class BoolMaster {
 
     // -----------------------------------------
 
-    create_key_checker(key) {
-        this.checkers[key] = {
-            int:null,
-            saved_prefix_data:this.prefix_data,
-            int_method:async function() {
-                let saved_prefix_data = tthis.checkers[key].saved_prefix_data
-                if(! await tthis.key_exists(key,saved_prefix_data))
-                    return
-                let data = await tthis.read_key(key,saved_prefix_data)
-                let check_data = JSON.stringify(data)
-                let last_data = tthis.checkers[key].last_data
-                if(check_data != last_data) {
-                    tthis.checkers[key].last_data = check_data
-                    for(let id in tthis.checkers[key].callbacks) {
-                        let callback = tthis.checkers[key].callbacks[id]
-                        callback(data)
-                    }
-                    return true
-                }
-                return false
-            },
-            last_data:'',
-            callbacks:[]
+    async checkers_update() {
+        let whole_data = {}
+        for(let path in this.checkers) {
+            let sppath = path.split(':')
+            let key = sppath[0]
+            if(whole_data.hasOwnProperty(key))
+                continue
+            if(await this.key_exists(key))
+                whole_data[key] = await this.read_key(key)
         }
-        let tthis = this
-        let interval = setInterval(this.checkers[key].int_method,500)
-        this.checkers[key].int = interval
+        let changes = this.main_checker.check(whole_data)
+        console.log(changes)
+        for(let path in changes)
+            if(this.checkers.hasOwnProperty(path))
+                for(let cbid in this.checkers[path])
+                    this.checkers[path][cbid](changes[path])
     }
+
+    create_key_checker(key) {
+        this.checkers[key] = {}
+        let tthis = this/*
+        if(this.checker_int == null)
+            this.checker_int = setInterval(async function(){
+                await tthis.checkers_update.call(tthis)
+            },1000)*/
+        this.checkers_update()
+    }
+
+    // -----------------------------------------
 
     async register_checker(key, callback) {
         if(!this.checkers.hasOwnProperty(key))
             this.create_key_checker(key)
         let id = Math.random()+''+Date.now()
-        this.checker_id[id] = key
-        this.checkers[key].callbacks[id] = callback
-
-        if(! await this.key_exists(key))
-            return id
-
-        let changed = await this.trigger_checker(key)
-        if(!changed)
-            callback(await this.read_key(key))
+        this.checkers[key][id] = callback
+        this.checkers_id[id] = key
+        this.trigger_checker(key)
         return id
     }
 
     async trigger_checker(key) {
-        if(!this.checkers.hasOwnProperty(key))
-            return false
-        return await this.checkers[key].int_method()
     }
 
     unregister_checker(id) {
         if(! this.checker_id.hasOwnProperty(id))
             return
         let key = this.checker_id[id]
-        delete this.checkers[key].callbacks[id]
+        delete this.checkers[key][id]
         delete this.checker_id[id]
-        if(Object.keys(this.checkers[key].callbacks) == 0) {
-            clearInterval(this.checkers[key].int)
+        if(Object.keys(this.checkers[key]) == 0) {
             delete this.checkers[key]
         }
+    }
+
+}
+
+// -----------------------------------------
+
+class Checker {
+
+    constructor() {
+        this.last_data = {}
+    }
+
+    reset_data() {
+        this.last_data = ''
+    }
+
+    check(new_data,last_data=null) {
+        let old_data = last_data==null?this.last_data:last_data
+        let changes = null
+        if(typeof(new_data) == typeof('') || new_data == null) {
+            if(new_data != last_data) {
+                changes = new_data
+            }
+        }
+        else {
+            changes = {}
+            for(let prop in new_data) {
+                if(!old_data.hasOwnProperty(prop)) {
+                    changes[prop] = {state:'added',value:new_data[prop]}
+                    continue
+                }
+                let subchange = this.check(new_data[prop],old_data[prop])
+                if(typeof(subchange) == typeof('') && subchange!=null)
+                    changes[prop] = {state:'changed',value:subchange}
+                else
+                    for(let subprop in subchange) {
+                        changes[prop+':'+subprop] = subchange[subprop]
+                }
+            }
+            for(let prop in old_data) {
+                if(!new_data.hasOwnProperty(prop)) {
+                    changes[prop] = {state:'removed',value:null}
+                }
+            }
+            if(changes == {})
+                changes = null
+        }
+        if(last_data == null && changes != null) {
+            this.last_data = new_data
+        }
+        return changes
     }
 
 }
