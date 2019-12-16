@@ -132,15 +132,17 @@ class BoolMaster {
     create_key_checker(key) {
         this.checkers[key] = {}
         let tthis = this
-        if(this.checker_int == null)
+        if(this.checker_int == null) {
             this.checker_int = setInterval(async function(){
                 await tthis.checkers_update.call(tthis)
             },1000)
+            this.checkers_update()
+        }
     }
 
     // -----------------------------------------
 
-    async register_checker(key, callback) {
+    register_checker(key, callback) {
         if(!this.checkers.hasOwnProperty(key))
             this.create_key_checker(key)
         let id = Math.random()+''+Date.now()
@@ -150,18 +152,19 @@ class BoolMaster {
         return id
     }
 
-    async trigger_checker(key) {
+    trigger_checker(key) {
+        this.checkers_update()
         if(this.checker_memory.hasOwnProperty(key)) {
             this.execute_callbacks(this.checkers[key],this.checker_memory[key])
         }
     }
 
     unregister_checker(id) {
-        if(! this.checker_id.hasOwnProperty(id))
+        if(!this.checkers_id.hasOwnProperty(id))
             return
-        let key = this.checker_id[id]
+        let key = this.checkers_id[id]
         delete this.checkers[key][id]
-        delete this.checker_id[id]
+        delete this.checkers_id[id]
         if(Object.keys(this.checkers[key]) == 0) {
             delete this.checkers[key]
         }
