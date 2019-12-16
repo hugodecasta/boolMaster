@@ -78,7 +78,13 @@ class BoolMaster {
 
     async checkers_update() {
         let whole_data = {}
-        for(let path in this.checkers) {
+
+        let checkers = {}
+        for(let elm in this.checkers) {
+            checkers[elm] = this.checkers[elm]
+        }
+
+        for(let path in checkers) {
             let sp = path.split('!')
             let data_path = sp[0]
             let status = sp[1]
@@ -100,7 +106,7 @@ class BoolMaster {
                 let prop = sp_data_path.splice(sp_data_path.length-1,1)[0]
                 let sub_path_add = sp_data_path.join(':')+'!added'
                 let sub_path_change = sp_data_path.join(':')+':'+prop+'!changed'
-                changes[sub_path_add] = [prop,changes[path]]
+                changes[sub_path_add] = {prop:prop,value:changes[path]}
                 changes[sub_path_change] = changes[path]
             }
         }
@@ -111,17 +117,17 @@ class BoolMaster {
 
         for(let path in changes) {
             let value = changes[path]
-            if(this.checkers.hasOwnProperty(path)) {
-                this.execute_callbacks(this.checkers[path],value)
+            if(checkers.hasOwnProperty(path)) {
+                this.execute_callbacks(checkers[path],value)
             }
         }
     }
 
     execute_callbacks(callbacks,value) {
         for(let cbid in callbacks) {
-            if(typeof(value) == typeof([]) && value!=null) {
-                let prop = value[0]
-                value = value[1]
+            if(typeof(value) == typeof({}) && value!=null && !(value instanceof Array)) {
+                let prop = value.prop
+                value = value.value
                 callbacks[cbid](prop,value)
                 continue
             }
@@ -154,8 +160,10 @@ class BoolMaster {
 
     trigger_checker(key) {
         this.checkers_update()
-        if(this.checker_memory.hasOwnProperty(key)) {
-            this.execute_callbacks(this.checkers[key],this.checker_memory[key])
+        for(let mem_key in this.checker_memory) {
+            if(mem_key.includes(key)) {
+                this.execute_callbacks(this.checkers[mem_key],this.checker_memory[mem_key])
+            }
         }
     }
 
@@ -189,7 +197,7 @@ class Checker {
         // ---------------
 
         function is_final(value) {
-            return typeof(value) == typeof('') || typeof(value) == typeof('')
+            return typeof(value) === typeof('') || typeof(value) === typeof(37) || value instanceof Array
         }
 
         // ---------------
@@ -215,7 +223,7 @@ class Checker {
 
             let old_value = old_data[prop]
             if(is_final(value)) {
-                if(value != old_value) {
+                if(JSON.stringify(value) != JSON.stringify(old_value)) {
                     changes[prop+'!changed'] = value
                 }
                 continue
@@ -241,10 +249,4 @@ class Checker {
         return changes
     }
 
-}
-
-Checker.STATUS = {
-    ADDED:1,
-    CHANGED:2,
-    REMOVED:3,
 }
