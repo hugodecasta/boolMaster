@@ -10,6 +10,7 @@ class BoolMaster {
 
         this.checkers = {}
         this.checkers_id = {}
+        this.checkers_viewed = {}
         this.checker_int = null
         this.checker_memory = {}
         this.main_checker = new Checker()
@@ -95,43 +96,72 @@ class BoolMaster {
             if(await this.key_exists(key))
                 whole_data[key] = await this.read_key(key)
         }
+
         let changes = this.main_checker.check(whole_data)
 
+        let full_changes = {}
         for(let path in changes) {
+            if(!full_changes.hasOwnProperty(path)) {
+                full_changes[path] = []
+            }
             let sp = path.split('!')
             let status = sp[1]
             let data_path = sp[0]
             let sp_data_path = data_path.split(':')
+            let value = changes[path]
             if(status == 'added') {
                 let prop = sp_data_path.splice(sp_data_path.length-1,1)[0]
                 let sub_path_add = sp_data_path.join(':')+'!added'
-                let sub_path_change = sp_data_path.join(':')+':'+prop+'!changed'
-                changes[sub_path_add] = {prop:prop,value:changes[path]}
-                changes[sub_path_change] = changes[path]
+                if(!full_changes.hasOwnProperty(sub_path_add)) {
+                    full_changes[sub_path_add] = []
+                }
+                full_changes[sub_path_add].push({prop:prop,value:value})
+                let sub_path_change = sp_data_path.join(':')+(sp_data_path.length>0?':':'')+prop+'!changed'
+                if(!full_changes.hasOwnProperty(sub_path_change)) {
+                    full_changes[sub_path_change] = []
+                }
+                full_changes[sub_path_change].push({prop:prop,value:value})
+                continue
             }
+            if(status == 'removed' && sp_data_path.length==1) {
+                continue
+            }
+            full_changes[path].push(value)
         }
 
-        for(let path in changes) {
-            this.checker_memory[path] = changes[path]
+        for(let path in full_changes) {
+            this.checker_memory[path] = full_changes[path]
         }
 
-        for(let path in changes) {
-            let value = changes[path]
+        for(let path in full_changes) {
+            let values = full_changes[path]
             if(checkers.hasOwnProperty(path)) {
-                this.execute_callbacks(checkers[path],value)
+                this.execute_callbacks(checkers[path],values)
             }
         }
     }
 
-    execute_callbacks(callbacks,value) {
+    execute_callbacks(callbacks,values) {
         for(let cbid in callbacks) {
-            if(typeof(value) == typeof({}) && value!=null && !(value instanceof Array)) {
-                let prop = value.prop
-                value = value.value
-                callbacks[cbid](prop,value)
-                continue
+            let viewed = false
+            for(let vvalues of this.checkers_viewed[cbid]) {
+                if(JSON.stringify(vvalues) == JSON.stringify(values)) {
+                    viewed = true
+                    break
+                }
             }
-            callbacks[cbid](value)
+            if(viewed)
+                continue
+            this.checkers_viewed[cbid].push(values)
+            for(let value of values) {
+                if(typeof(value) == typeof({}) && value!=null && !(value instanceof Array)) {
+                    let prop = value.prop
+                    value = value.value
+                    callbacks[cbid](prop,value)
+                    continue
+                }
+                callbacks[cbid](value)
+            }
         }
     }
 
@@ -154,6 +184,7 @@ class BoolMaster {
         let id = Math.random()+''+Date.now()
         this.checkers[key][id] = callback
         this.checkers_id[id] = key
+        this.checkers_viewed[id] = []
         this.trigger_checker(key)
         return id
     }
@@ -167,14 +198,31 @@ class BoolMaster {
         }
     }
 
+    reset_all_checker(except_list=[]) {
+        let ids = []
+        for(let id in this.checkers_id) {
+            if(except_list.indexOf(id) == -1) {
+                ids.push(id)
+            }
+        }
+        for(let id of ids) {
+            this.unregister_checker(id)
+        }
+    }
+
     unregister_checker(id) {
         if(!this.checkers_id.hasOwnProperty(id))
             return
         let key = this.checkers_id[id]
         delete this.checkers[key][id]
+        delete this.checkers_viewed[id]
         delete this.checkers_id[id]
         if(Object.keys(this.checkers[key]) == 0) {
             delete this.checkers[key]
+        }
+        if(Object.keys(this.checkers) == 0) {
+            clearInterval(this.checker_int)
+            this.checker_int = null
         }
     }
 
