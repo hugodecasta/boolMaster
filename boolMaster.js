@@ -158,8 +158,8 @@ class BoolMaster {
         return id
     }
 
-    trigger_checker(key) {
-        this.checkers_update()
+    async trigger_checker(key) {
+        await this.checkers_update()
         for(let mem_key in this.checker_memory) {
             if(mem_key.includes(key)) {
                 this.execute_callbacks(this.checkers[mem_key],this.checker_memory[mem_key])
