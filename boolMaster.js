@@ -123,14 +123,13 @@ class BoolMaster {
                 full_changes[sub_path_change].push({prop:prop,value:value})
                 continue
             }
-            if(status == 'removed' && sp_data_path.length==1) {
-                continue
-            }
             full_changes[path].push(value)
         }
 
         for(let path in full_changes) {
-            this.checker_memory[path] = full_changes[path]
+            if(!path.includes('removed')) {
+                this.checker_memory[path] = full_changes[path]
+            }
         }
 
         for(let path in full_changes) {
@@ -171,7 +170,7 @@ class BoolMaster {
         if(this.checker_int == null) {
             this.checker_int = setInterval(async function(){
                 await tthis.checkers_update.call(tthis)
-            },1000)
+            },100)
             this.checkers_update()
         }
     }
@@ -198,6 +197,10 @@ class BoolMaster {
         }
     }
 
+    reset_checkers() {
+        this.main_checker.reset_data()
+    }
+
     reset_all_checker(except_list=[]) {
         let ids = []
         for(let id in this.checkers_id) {
@@ -219,6 +222,9 @@ class BoolMaster {
         delete this.checkers_id[id]
         if(Object.keys(this.checkers[key]) == 0) {
             delete this.checkers[key]
+            if(this.checker_memory.hasOwnProperty(key)) {
+                delete this.checker_memory[key]
+            }
         }
         if(Object.keys(this.checkers) == 0) {
             clearInterval(this.checker_int)
