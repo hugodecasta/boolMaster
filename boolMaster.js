@@ -33,10 +33,12 @@ class BoolMaster {
         kwargs['key'] = prefix+key
 
         let url = this.host+'/?method='+method
+
         for(let arg in kwargs) {
             let value = kwargs[arg]
-            url += '&'+arg+'='+value
+            url += '&'+arg+'='+encodeURIComponent(value)
         }
+
         return new Promise((ok)=>{
             $.get(url).done(function(data){
                 ok(data)
