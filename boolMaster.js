@@ -24,6 +24,7 @@ export default class BoolMaster {
             prefix = prefix_data['*']
 
         kwargs['key'] = prefix+key
+        kwargs['method'] = method
 
         return new Promise((ok)=>{
             $.post(this.host,kwargs).done(function(data){
