@@ -25,15 +25,8 @@ export default class BoolMaster {
 
         kwargs['key'] = prefix+key
 
-        let url = this.host+'/?method='+method
-
-        for(let arg in kwargs) {
-            let value = kwargs[arg]
-            url += '&'+arg+'='+encodeURIComponent(value)
-        }
-
         return new Promise((ok)=>{
-            $.get(url).done(function(data){
+            $.post(this.host,kwargs).done(function(data){
                 ok(data)
             })
         })

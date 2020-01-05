@@ -9,22 +9,22 @@ header('Access-Control-Allow-Origin: *');
 $api_method_map = array(
     'read_key' => array(
         'function' => 'read_file',
-        'meth' => 'GET',
+        'meth' => 'POST',
         'args' => array('key')
     ),
     'write_key' => array(
         'function' => 'write_file',
-        'meth' => 'GET',
+        'meth' => 'POST',
         'args' => array('key','file_data')
     ),
     'key_exists' => array(
         'function' => 'key_exist',
-        'meth' => 'GET',
+        'meth' => 'POST',
         'args' => array('key')
     ),
     'key_remove' => array(
         'function' => 'remove_file',
-        'meth' => 'GET',
+        'meth' => 'POST',
         'args' => array('key')
     ),
 );
