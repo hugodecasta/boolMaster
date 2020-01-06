@@ -8,12 +8,12 @@ header('Access-Control-Allow-Origin: *');
 
 $api_method_map = array(
     'read_key' => array(
-        'function' => 'read_file',
+        'function' => 'read_key',
         'meth' => 'POST',
         'args' => array('key')
     ),
     'write_key' => array(
-        'function' => 'write_file',
+        'function' => 'write_key',
         'meth' => 'POST',
         'args' => array('key','file_data')
     ),
@@ -23,9 +23,14 @@ $api_method_map = array(
         'args' => array('key')
     ),
     'key_remove' => array(
-        'function' => 'remove_file',
+        'function' => 'remove_key',
         'meth' => 'POST',
         'args' => array('key')
+    ),
+    'create_reader' => array(
+        'function' => 'create_reader',
+        'meth' => 'POST',
+        'args' => array('reader_key','target_key')
     ),
 );
 
